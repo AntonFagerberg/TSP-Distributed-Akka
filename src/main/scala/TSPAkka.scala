@@ -77,43 +77,63 @@ class Worker extends Actor {
   def workMode(matrix: List[List[Int]]): Receive = {
     case BatchWork(nodeBatch, record) => {
       val pathLength = nodeBatch.head.length
+      val indexList = (0 until pathLength).toList
       var recordCache = record
       var workPath: Seq[Int] = null
       var bestPath: Seq[Int] = null
       var length = 0
-      var lb = 0
       var lw = 0
+      var p1List = List(0)
+      var p2List = List(0)
       var p1 = 0
-      var p2 = 1
+      var p2 = 0
 
       nodeBatch.foreach { path =>
         bestPath = path
+        length = checkLength(bestPath, matrix)
 
-        while (p1 != pathLength) {
-          while (p2 != pathLength) {
-            workPath = bestPath.take(p1).reverse ++ bestPath.slice(p1, p2) ++ bestPath.drop(p2).reverse
+        p1List = Random.shuffle(indexList)
+        p1 = p1List.headOption.getOrElse(-1)
+        p1List = p1List.tail
 
-            lb = checkLength(bestPath, matrix)
-            lw = checkLength(workPath, matrix)
+        p2List = Random.shuffle(indexList)
+        p2 = p2List.headOption.getOrElse(-1)
+        p2List = p2List.tail
 
-            length =
-              if (lb <= lw) {
-                p2 += 1
-                lb
-              } else  {
-                bestPath = workPath
-                p1 = 0
-                p2 = 1
-                lw
+
+        while (p1 != -1) {
+          while (p2 != -1) {
+            if (p2 >= p1) {
+              workPath = bestPath.take(p1).reverse ++ bestPath.slice(p1, p2) ++ bestPath.drop(p2).reverse
+              lw = checkLength(workPath, matrix)
+
+              length =
+                if (length <= lw) length
+                else {
+                  bestPath = workPath
+                  p1List = Random.shuffle(indexList)
+                  p1 = p1List.headOption.getOrElse(-1)
+                  p1List = p1List.tail
+                  p2List = Random.shuffle(indexList)
+                  lw
+                }
+
+              if (length < recordCache) {
+                recordCache = length
+                context.parent ! Result(length, bestPath.mkString("[", ",", "]"))
               }
-
-            if (length < recordCache) {
-              recordCache = length
-              context.parent ! Result(length, bestPath.mkString("[", ",", "]"))
             }
+
+            p2 = p2List.headOption.getOrElse(-1)
+            if (p2 != -1) p2List = p2List.tail
           }
 
-          p1 += 1
+          p2List = Random.shuffle(indexList)
+          p2 = p2List.headOption.getOrElse(-1)
+          if (p2 != -1) p2List = p2List.tail
+
+          p1 = p1List.headOption.getOrElse(-1)
+          if (p1 != -1) p1List = p1List.tail
         }
       }
 
