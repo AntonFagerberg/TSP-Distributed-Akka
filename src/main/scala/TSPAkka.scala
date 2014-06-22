@@ -26,7 +26,7 @@ class Supervisor extends Actor {
   val length = nodes.length
   val matrix = distanceMatrix(nodes).map(_.toList).toList
   var record = Double.MaxValue
-  val batchSize = 10
+  val batchSize = 10000
   val cores = Runtime.getRuntime.availableProcessors()
 
   (0 until cores) foreach {
