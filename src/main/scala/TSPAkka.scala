@@ -69,7 +69,6 @@ class Worker extends Actor {
   def workMode(matrix: Seq[Seq[Double]]): Receive = {
     case BatchWork(nodeBatch, record) => {
       val pathLength = nodeBatch.head.length
-      val indexList = (0 until pathLength).toList
       var recordCache = record
       var workPath: Seq[Int] = null
       var bestPath: Seq[Int] = null
@@ -84,7 +83,7 @@ class Worker extends Actor {
         bestPath = path
         length = checkLength(bestPath, matrix)
 
-        p1List = Random.shuffle(indexList)
+        p1List = Random.shuffle((0 until pathLength - 1).toList)
         p1 = p1List.headOption.getOrElse(-1)
         p1List = p1List.tail
 
@@ -101,7 +100,7 @@ class Worker extends Actor {
               if (length - lw < 0.01d) length
               else {
                 bestPath = workPath
-                p1List = Random.shuffle(indexList)
+                p1List = Random.shuffle((0 until pathLength - 1).toList)
                 p1 = p1List.headOption.getOrElse(-1)
                 p1List = p1List.tail
 
