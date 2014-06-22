@@ -26,7 +26,7 @@ class Supervisor extends Actor {
   val length = nodes.length
   val matrix = distanceMatrix(nodes).map(_.toList).toList
   var record = Double.MaxValue
-  val batchSize = 10000
+  val batchSize = 100
   val cores = Runtime.getRuntime.availableProcessors()
 
   (0 until cores) foreach {
@@ -88,43 +88,42 @@ class Worker extends Actor {
         p1 = p1List.headOption.getOrElse(-1)
         p1List = p1List.tail
 
-        p2List = Random.shuffle(indexList)
+        p2List = Random.shuffle((p1 + 1 until pathLength).toList)
         p2 = p2List.headOption.getOrElse(-1)
         p2List = p2List.tail
 
         while (p1 != -1) {
           while (p2 != -1) {
-            if (p2 > p1) {
-              workPath = bestPath.take(p1) ++ bestPath.slice(p1, p2).reverse ++ bestPath.drop(p2)
-              lw = checkLength(workPath, matrix)
+            workPath = bestPath.take(p1) ++ bestPath.slice(p1, p2).reverse ++ bestPath.drop(p2)
+            lw = checkLength(workPath, matrix)
 
-              length =
-                if (length - lw < 0.01d) length
-                else {
-                  bestPath = workPath
-                  p1List = Random.shuffle(indexList)
-                  p1 = p1List.headOption.getOrElse(-1)
-                  p1List = p1List.tail
-                  p2List = Random.shuffle(indexList)
-                  lw
-                }
+            length =
+              if (length - lw < 0.01d) length
+              else {
+                bestPath = workPath
+                p1List = Random.shuffle(indexList)
+                p1 = p1List.headOption.getOrElse(-1)
+                p1List = p1List.tail
 
-              if (length - recordCache < 0.01d) {
-                recordCache = length
-                context.parent ! Result(length, bestPath.mkString("[", ",", "]"))
+                p2List = Random.shuffle((p1 + 1 until pathLength).toList)
+                lw
               }
+
+            if (length - recordCache < 0.01d) {
+              recordCache = length
+              context.parent ! Result(length, bestPath.mkString("[", ",", "]"))
             }
 
             p2 = p2List.headOption.getOrElse(-1)
             if (p2 != -1) p2List = p2List.tail
           }
 
-          p2List = Random.shuffle(indexList)
-          p2 = p2List.headOption.getOrElse(-1)
-          if (p2 != -1) p2List = p2List.tail
-
           p1 = p1List.headOption.getOrElse(-1)
           if (p1 != -1) p1List = p1List.tail
+
+          p2List = Random.shuffle((p1 + 1 until pathLength).toList)
+          p2 = p2List.headOption.getOrElse(-1)
+          if (p2 != -1) p2List = p2List.tail
         }
       }
 
